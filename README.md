@@ -1,6 +1,8 @@
 # appluyennoi
 
-App luyện nói tiếng Anh trên laptop (Windows/macOS): hiện phụ đề tiếng Anh theo thời gian thực khi học viên nói,
-đồng thời sửa lỗi, gợi ý từ vựng và cấu trúc câu. Điện thoại có thể dùng làm micro (qua Wi‑Fi, không cần cài app).
+App luyện thuyết trình tiếng Anh cho sinh viên. Sinh viên dùng điện thoại làm micro: quét mã QR, mở trang web,
+không cần cài app, chạy được trên cả iPhone. Âm thanh truyền qua Wi‑Fi về laptop của giảng viên (Windows/macOS).
+Laptop hiện phụ đề trực tiếp; khi sinh viên nói xong, app lập transcript đầy đủ, tô màu lỗi phát âm, từ vựng,
+ngữ pháp/cấu trúc và đề xuất cách sửa.
 
 Xem kế hoạch chi tiết: [docs/KE_HOACH_CHI_TIET.md](docs/KE_HOACH_CHI_TIET.md)

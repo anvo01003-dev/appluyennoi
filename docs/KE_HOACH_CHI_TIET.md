@@ -1,11 +1,12 @@
-# KẾ HOẠCH CHI TIẾT – APP LUYỆN NÓI TIẾNG ANH (bản cho laptop)
+# KẾ HOẠCH CHI TIẾT – APP LUYỆN THUYẾT TRÌNH TIẾNG ANH CHO SINH VIÊN
 
-> Mục tiêu: học viên nói tiếng Anh vào micro (micro laptop, tai nghe, hoặc **điện thoại dùng làm micro**),
-> app hiện **phụ đề tiếng Anh theo thời gian thực**, đồng thời **sửa lỗi**, **gợi ý từ vựng** và
-> **gợi ý cấu trúc câu** hay hơn.
+> **Cách dùng chính:** sinh viên cầm **điện thoại làm micro** (quét mã QR, mở trang web, không cần cài app)
+> và thuyết trình bằng tiếng Anh. Âm thanh truyền qua Wi‑Fi về **laptop của giảng viên**.
+> Laptop hiện **phụ đề trực tiếp**. Khi sinh viên nói xong, app lập **bản transcript đầy đủ**,
+> **tô màu những chỗ sai** về **phát âm**, **từ vựng** và **ngữ pháp/cấu trúc**, kèm **đề xuất sửa** cho từng lỗi.
 >
-> Nền tảng: **ứng dụng desktop trên laptop (Windows + macOS)**. Không làm app iPhone vì phải đưa lên
-> App Store (duyệt, tài khoản developer, phí hằng năm). Điện thoại vẫn dùng được – chỉ làm micro.
+> Nền tảng: **app desktop trên laptop (Windows + macOS)**. Điện thoại chỉ mở trang web nên chạy được
+> trên cả iPhone lẫn Android mà không phải đưa app lên App Store hay CH Play.
 
 ---
 
@@ -13,331 +14,356 @@
 
 | Vấn đề | Quyết định | Lý do |
 |---|---|---|
-| Nền tảng | App desktop **Electron + React + TypeScript** | Một mã nguồn chạy cả Windows và macOS, đóng gói thành file `.exe` / `.dmg`, không qua kho ứng dụng |
-| Thu âm | Web Audio API trong Electron (`getUserMedia`) | Đọc được mọi micro hệ điều hành nhận diện: micro laptop, tai nghe, USB, Bluetooth |
-| Điện thoại làm micro | **Trang web nội bộ (LAN) + mã QR** – không cần cài app | Điện thoại mở trình duyệt, quét QR, bấm "Bắt đầu" → âm thanh truyền về laptop qua Wi‑Fi |
-| Nhận dạng giọng nói (phụ đề) | Dịch vụ **streaming STT trên mây** (mặc định) + **Whisper chạy offline** (tùy chọn) | Mây: độ trễ thấp (~300–800 ms), chính xác. Offline: miễn phí, riêng tư, cần máy khỏe |
-| Sửa lỗi / gợi ý | **Claude API** (model nhanh `claude-haiku-5-5` cho từng câu, `claude-sonnet-5-5` cho tổng kết buổi) | Trả về JSON có cấu trúc: lỗi, câu sửa, giải thích tiếng Việt, từ vựng, cấu trúc |
-| Lưu trữ | **SQLite** cục bộ trên máy | Lưu buổi học, lỗi hay gặp, sổ từ vựng; không cần server riêng |
-| Khóa API | Người dùng/giáo viên nhập trong Cài đặt, lưu bằng kho khóa của hệ điều hành (`keytar` / safeStorage) | Không ghi khóa vào mã nguồn |
+| App chính | **Electron + React + TypeScript** trên laptop | Một mã nguồn cho Windows và macOS, cài bằng file `.exe` / `.dmg` |
+| Micro | **Điện thoại sinh viên, qua trang web nội bộ (LAN) + mã QR** | Không cài app; iPhone dùng được qua Safari |
+| Truyền âm thanh | WebSocket qua Wi‑Fi (trực tiếp) **+ ghi âm dự phòng ngay trên điện thoại** | Wi‑Fi chập chờn vẫn không mất bài; cuối bài gửi lại file đầy đủ |
+| Phụ đề trực tiếp | Dịch vụ **STT streaming** (nhận dạng giọng nói → chữ) | Hiện chữ trong vòng dưới 1 giây, chiếu lên màn hình cho cả lớp |
+| Transcript cuối | Chạy lại STT trên **toàn bộ file ghi âm**, có mốc thời gian từng từ | Chính xác hơn bản trực tiếp |
+| **Lỗi phát âm** | **Dịch vụ chấm phát âm** (ví dụ Azure Pronunciation Assessment, SpeechSuper, Speechace) | Phát âm phải chấm **từ âm thanh**; mô hình ngôn ngữ chỉ đọc chữ nên không chấm được |
+| **Lỗi từ vựng + ngữ pháp/cấu trúc** | **Claude API** (`claude-sonnet-5-5`) đọc toàn bộ transcript | Hiểu ngữ cảnh cả bài, trả về lỗi theo vị trí từng từ kèm giải thích tiếng Việt |
+| Lưu trữ | **SQLite** trên laptop | Lưu theo lớp, theo sinh viên; không cần server |
+| Khóa API | Nhập trong Cài đặt, lưu bằng kho khóa của hệ điều hành | Không ghi khóa vào mã nguồn |
 
 ---
 
-## 2. Người dùng & tình huống sử dụng
+## 2. Quy trình một buổi thuyết trình
 
-1. **Học viên tự luyện**: mở app → chọn chủ đề (giới thiệu bản thân, phỏng vấn, IELTS Part 2…) → nói → xem phụ đề và lời sửa ngay.
-2. **Giáo viên trong lớp**: laptop nối máy chiếu, học viên cầm điện thoại làm micro (quét QR), cả lớp cùng xem phụ đề và lỗi trên màn hình lớn.
-3. **Luyện từ file ghi âm**: học viên ghi âm sẵn (bằng app Ghi âm của điện thoại) → kéo thả file `.m4a/.mp3/.wav` vào app → app chạy phụ đề và sửa lỗi y như lúc nói trực tiếp.
+```
+ GIẢNG VIÊN (laptop)                     SINH VIÊN (điện thoại)
+ ───────────────────                     ──────────────────────
+ 1. Mở app → "Buổi mới"
+    chọn lớp, chủ đề → hiện QR + mã 6 số
+                                         2. Quét QR → mở trang web
+                                            nhập tên/MSSV (hoặc chọn từ danh sách)
+                                            (tùy chọn) dán kịch bản bài nói
+                                         3. Bấm "BẮT ĐẦU THUYẾT TRÌNH"
+                                            → cho phép dùng micro
+ 4. Màn hình chiếu: phụ đề chạy trực tiếp ◀── âm thanh qua Wi‑Fi ───
+    đồng hồ, tốc độ nói, mức âm lượng      (điện thoại vẫn ghi âm dự phòng)
+                                         5. Bấm "KẾT THÚC"
+                                            → gửi file ghi âm đầy đủ về laptop
+ 6. App phân tích (≈ 30–90 giây):
+    a. transcript chính xác + mốc thời gian
+    b. chấm phát âm từng từ
+    c. phát hiện lỗi từ vựng, ngữ pháp/cấu trúc
+    d. ghép tất cả lại thành báo cáo
+ 7. BÁO CÁO: transcript tô màu lỗi,       8. Sinh viên xem báo cáo trên điện thoại
+    bấm vào lỗi để nghe lại đoạn âm thanh     (cùng trang web) hoặc nhận file PDF
+    và xem đề xuất sửa
+ 9. Lưu vào hồ sơ sinh viên → sinh viên kế tiếp quét QR
+```
 
 ---
 
-## 3. Danh sách tính năng
+## 3. Báo cáo sau thuyết trình (sản phẩm chính)
 
-### 3.1. MVP (bản đầu tiên – bắt buộc có)
-- [ ] Chọn thiết bị micro (danh sách micro hệ điều hành nhận), đo mức âm lượng (thanh VU).
-- [ ] Nút **Bắt đầu / Tạm dừng / Kết thúc** buổi luyện.
-- [ ] **Phụ đề thời gian thực**: chữ xám = đang nghe (tạm thời), chữ đen = câu đã chốt.
-- [ ] Khi một câu được chốt → gửi đi phân tích → hiện **thẻ góp ý** bên phải:
-  - Câu gốc (lỗi gạch chân đỏ) → câu đã sửa (xanh).
-  - Giải thích ngắn bằng **tiếng Việt** (loại lỗi: thì, mạo từ, giới từ, hòa hợp chủ‑vị, từ sai…).
-  - 1–3 **từ vựng nâng cao** thay thế (kèm nghĩa, ví dụ).
-  - 1 **cấu trúc câu** hay hơn (ví dụ: "Not only… but also…").
-- [ ] Mở file âm thanh có sẵn để phân tích.
-- [ ] Lưu lịch sử buổi học, xuất bản ghi (TXT/PDF).
-- [ ] Trang Cài đặt: khóa API, ngôn ngữ giải thích, trình độ (A2/B1/B2/C1), mức độ sửa (chỉ lỗi nặng / tất cả).
+### 3.1. Tô màu lỗi trong transcript
+| Màu | Loại lỗi | Ví dụ | Đề xuất hiện ra |
+|---|---|---|---|
+| 🟣 **Tím** | **Phát âm** | "**think**" đọc thành /sɪŋk/ | Âm đúng /θɪŋk/, âm bị sai (θ → s), nút nghe giọng mẫu và nút nghe lại giọng mình |
+| 🟠 **Cam** | **Từ vựng** (dùng sai từ, sai kết hợp từ, lặp từ, từ quá đơn giản) | "make a research" | "**do/conduct** research"; nghĩa và ví dụ |
+| 🔴 **Đỏ** | **Ngữ pháp / cấu trúc** (thì, mạo từ, số ít/nhiều, trật tự từ, câu thiếu động từ…) | "Yesterday I **go**…" | "Yesterday I **went**…"; giải thích ngắn bằng tiếng Việt |
+| 🔵 **Xanh dương** | **Gợi ý nâng cấp** (câu đúng nhưng có cách nói hay hơn) | "It is very important" | "It is **crucial**…" / "What matters most is…" |
 
-### 3.2. Giai đoạn 2
-- [ ] **Điện thoại làm micro qua Wi‑Fi** (QR code) – chi tiết ở mục 5.
-- [ ] **Tổng kết buổi học**: số lỗi theo loại, 5 lỗi lặp lại nhiều nhất, từ vựng mới, điểm ước lượng (trôi chảy, ngữ pháp, từ vựng).
-- [ ] **Sổ từ vựng** + ôn tập kiểu flashcard (lặp lại ngắt quãng).
-- [ ] Chủ đề luyện nói + câu hỏi gợi mở do AI tạo.
-- [ ] Đo tốc độ nói (từ/phút), số lần ngập ngừng ("um", "uh").
+- Rê chuột hoặc bấm vào chỗ tô màu sẽ mở thẻ góp ý: lỗi, cách sửa, giải thích tiếng Việt, nút ▶ nghe lại đoạn đó.
+- Có bộ lọc bật/tắt từng loại lỗi và chọn mức độ (chỉ lỗi nặng / tất cả).
+- Có chế độ **"Bản đã sửa"**: hiện toàn bộ bài nói sau khi sửa để sinh viên đọc luyện lại.
 
-### 3.3. Giai đoạn 3 (mở rộng)
-- [ ] Chấm phát âm (pronunciation assessment) theo từng từ.
-- [ ] Chế độ hội thoại: AI đóng vai người phỏng vấn, đọc câu hỏi bằng giọng nói (TTS).
-- [ ] Chế độ offline hoàn toàn (Whisper + mô hình nhỏ chạy cục bộ).
-- [ ] Tài khoản giáo viên xem tiến bộ của nhiều học viên (cần server – chỉ làm khi có nhu cầu).
+### 3.2. Phần tổng quan đầu báo cáo
+- **Điểm** (0–100): Phát âm, Độ trôi chảy, Từ vựng, Ngữ pháp, cùng điểm tổng (trọng số giảng viên chỉnh được).
+- Thời lượng, số từ, **tốc độ nói (từ/phút)**, số lần ngập ngừng ("um", "uh"), các khoảng ngừng dài.
+- **Top 5 lỗi lặp lại** (ví dụ: bỏ âm cuối /s/, quên chia thì quá khứ).
+- **Nhận xét nội dung bài thuyết trình**: có mở bài, thân bài, kết luận không; có dùng từ nối/chuyển ý không; gợi ý 3–5 cụm câu chuyển ý.
+- **Từ vựng nên học**: danh sách từ hoặc cụm từ gợi ý, có thể lưu vào sổ từ vựng.
+
+### 3.3. Xuất và chia sẻ
+- Xuất **PDF** (transcript có tô màu, bảng lỗi, điểm) để gửi sinh viên hoặc lưu hồ sơ.
+- Xuất **Excel/CSV** điểm cả lớp.
+- Sinh viên xem báo cáo ngay trên điện thoại qua trang web nội bộ khi còn trong lớp.
 
 ---
 
 ## 4. Kiến trúc tổng thể
 
 ```
-┌──────────────────── LAPTOP (App Electron) ─────────────────────────────┐
-│                                                                        │
-│  NGUỒN ÂM THANH                 XỬ LÝ                     GIAO DIỆN     │
-│  ┌──────────────┐                                                      │
-│  │ Micro laptop │──┐                                                   │
-│  │ / tai nghe   │  │   ┌───────────────┐   ┌──────────────┐  ┌───────┐ │
-│  └──────────────┘  ├──▶│ Audio Engine  │──▶│  STT Client  │─▶│ Phụ đề│ │
-│  ┌──────────────┐  │   │ 16kHz mono PCM│   │ (streaming)  │  │ (live)│ │
-│  │ File ghi âm  │──┤   │ + VAD         │   └──────┬───────┘  └───────┘ │
-│  └──────────────┘  │   └───────────────┘          │ câu đã chốt         │
-│  ┌──────────────┐  │                       ┌──────▼───────┐  ┌───────┐ │
-│  │ Điện thoại   │──┘                       │ Feedback     │─▶│ Thẻ   │ │
-│  │ (WebSocket   │                          │ Engine       │  │ góp ý │ │
-│  │  qua Wi‑Fi)  │                          │ (Claude API) │  └───────┘ │
-│  └──────────────┘                          └──────┬───────┘            │
-│                                             ┌─────▼─────┐              │
-│                                             │  SQLite   │ lịch sử, từ  │
-│                                             └───────────┘ vựng, lỗi    │
-└────────────────────────────────────────────────────────────────────────┘
-          │ Internet (HTTPS / WebSocket)
-          ▼
-   Dịch vụ STT streaming          Claude API
+┌──────── ĐIỆN THOẠI (trình duyệt) ────────┐
+│ Trang web "phone-web"                     │
+│ • getUserMedia → AudioWorklet (16 kHz PCM)│──── WebSocket (wss://) qua Wi‑Fi ───┐
+│ • MediaRecorder: ghi âm dự phòng          │──── cuối bài: tải lên file đầy đủ ──┤
+│ • Xem báo cáo                             │◀─── báo cáo (HTML) ─────────────────┤
+└───────────────────────────────────────────┘                                     │
+┌──────────────────────── LAPTOP (App Electron) ──────────────────────────────────▼─┐
+│ Phone Bridge: máy chủ HTTPS + WebSocket, QR, mã ghép đôi 6 số                     │
+│        │                                                                          │
+│        ├──▶ STT streaming ──▶ Phụ đề trực tiếp (màn hình chiếu)                    │
+│        │                                                                          │
+│        └──▶ Lưu file WAV ──▶ PIPELINE PHÂN TÍCH (sau khi kết thúc)                 │
+│                               1. STT toàn bài (mốc thời gian từng từ)             │
+│                               2. Chấm phát âm  ──────┐                            │
+│                               3. Claude: từ vựng,    ├──▶ 4. Ghép lỗi theo từ ──▶ BÁO CÁO
+│                                  ngữ pháp, cấu trúc, │                            │
+│                                  nội dung ───────────┘                            │
+│ SQLite: lớp, sinh viên, buổi thuyết trình, lỗi, điểm, từ vựng                     │
+└───────────────────────────────────────────────────────────────────────────────────┘
+                 │ Internet
+                 ▼
+     Dịch vụ STT  ·  Dịch vụ chấm phát âm  ·  Claude API
 ```
 
-### 4.1. Luồng dữ liệu một câu nói
-1. Micro → `AudioWorklet` lấy mẫu, chuyển về **PCM 16‑bit, 16 kHz, mono**, gói 100 ms/khung.
-2. Khung âm thanh gửi liên tục qua WebSocket tới dịch vụ STT.
-3. STT trả về 2 loại kết quả:
-   - **interim** (tạm thời) → cập nhật dòng phụ đề màu xám, ~200–500 ms/lần.
-   - **final** (đã chốt, khi người nói ngắt nghỉ) → dòng chữ đen.
-4. Câu **final** đưa vào hàng đợi phân tích. Gom thêm 1–2 câu trước làm ngữ cảnh.
-5. Feedback Engine gọi Claude (streaming), nhận JSON → hiện thẻ góp ý (mục tiêu < 2 giây sau khi chốt câu).
-6. Lưu câu + góp ý vào SQLite.
+---
 
-### 4.2. Ngân sách độ trễ (mục tiêu)
-| Bước | Mục tiêu |
+## 5. Điện thoại làm micro (Phone Bridge) – phần lõi, làm ngay từ đầu
+
+### 5.1. Cách hoạt động
+1. App laptop chạy máy chủ HTTPS + WebSocket trong mạng nội bộ, ví dụ `https://192.168.1.15:8443`.
+2. Màn hình hiện **mã QR** (chứa địa chỉ + mã phiên) và **mã 6 số** để nhập tay nếu không quét được.
+3. Điện thoại mở trang web → nhập tên → bấm **Bắt đầu** → âm thanh được gửi liên tục từng gói 100 ms.
+4. Mỗi lúc chỉ **1 điện thoại "đang nói"**; các máy khác vào hàng chờ, giảng viên bấm để gọi người kế tiếp.
+
+### 5.2. Không để mất bài khi Wi‑Fi yếu
+- Điện thoại **ghi âm song song** (MediaRecorder). Khi bấm Kết thúc thì tải file đầy đủ lên laptop.
+- Phân tích cuối luôn dùng **file đầy đủ**. Luồng trực tiếp chỉ để hiện phụ đề.
+- Rớt mạng giữa chừng: điện thoại tự kết nối lại, phụ đề có thể ngắt quãng nhưng báo cáo vẫn đủ.
+- Trang web giữ màn hình sáng (Wake Lock) để điện thoại không tự khóa khi đang nói.
+
+### 5.3. Vấn đề của iPhone/Safari và cách xử lý
+| Vấn đề | Xử lý |
 |---|---|
-| Thu âm + đóng gói | < 100 ms |
-| Phụ đề tạm thời hiện lên | < 700 ms sau khi nói |
-| Câu được chốt (sau khi ngừng nói) | 300–800 ms |
-| Thẻ góp ý hiện lên | < 2,5 s sau khi câu chốt |
+| Safari chỉ cho dùng micro trên trang **HTTPS** | Laptop tự tạo chứng chỉ. Lần đầu bấm "Vẫn truy cập" theo hướng dẫn có ảnh. Bản sau: cài chứng chỉ gốc (mkcert) một lần |
+| Phải có thao tác chạm thì mới bật được âm thanh | Dùng nút "Bắt đầu" to, rõ |
+| Tắt màn hình hoặc chuyển app thì micro dừng | Wake Lock, cảnh báo "đừng thoát trang khi đang nói" |
+| Wi‑Fi trường chặn các máy nói chuyện với nhau | Laptop phát Wi‑Fi (hotspot) hoặc dùng bộ phát Wi‑Fi riêng cho lớp |
+
+### 5.4. Chất lượng âm thanh
+- Tắt khử ồn quá mạnh hoặc tự chỉnh âm lượng (`echoCancellation`/`autoGainControl`) nếu thấy làm méo giọng, vì có thể làm sai điểm phát âm. Sẽ thử cả hai chế độ ở tuần 1.
+- Hướng dẫn sinh viên cầm điện thoại cách miệng khoảng 15–25 cm, đứng xa loa máy chiếu.
+- Đo mức âm lượng; nếu quá nhỏ hoặc bị vỡ tiếng thì cảnh báo ngay trên điện thoại.
 
 ---
 
-## 5. Cách lấy âm thanh – trả lời câu hỏi "mở âm thanh bằng gì?"
+## 6. Nhận dạng giọng nói (transcript)
 
-App đọc âm thanh **giống như mọi ứng dụng gọi điện/họp trực tuyến** (Zoom, Meet): lấy từ thiết bị
-micro mà hệ điều hành đang nhận. Có 4 cách, xếp theo độ đơn giản:
-
-### Cách A – Micro laptop hoặc tai nghe (mặc định, dễ nhất)
-- Tai nghe có dây/Bluetooth, hoặc micro USB. Chọn trong menu "Thiết bị micro" của app.
-- Khuyên dùng tai nghe có micro để giảm tiếng ồn → phụ đề chính xác hơn.
-
-### Cách B – Điện thoại làm micro qua Wi‑Fi (**không cần cài app trên điện thoại**) ⭐
-1. App laptop bật một máy chủ nhỏ trong mạng nội bộ (ví dụ `https://192.168.1.15:8443`) và hiện **mã QR**.
-2. Điện thoại (iPhone hoặc Android) **cùng Wi‑Fi** quét QR → mở trang web trong Safari/Chrome.
-3. Bấm **"Bắt đầu nói"** → trình duyệt xin quyền micro → âm thanh gửi về laptop qua WebSocket.
-4. Laptop nhận âm thanh và xử lý như micro thường; phụ đề hiện trên laptop (và có thể hiện lại trên điện thoại).
-
-Lưu ý kỹ thuật:
-- Safari trên iPhone **chỉ cho dùng micro trên trang HTTPS** → app tự tạo chứng chỉ (self‑signed).
-  Lần đầu điện thoại sẽ cảnh báo "không an toàn" → hướng dẫn bấm "Vẫn truy cập". Có thể cải tiến sau bằng `mkcert`.
-- Mỗi phiên kết nối có **mã ghép đôi 6 số** để người khác trong cùng Wi‑Fi không chen vào.
-- Wi‑Fi trường học đôi khi chặn các máy nói chuyện với nhau (client isolation) → dùng **điểm phát Wi‑Fi từ laptop/điện thoại**.
-
-### Cách C – Điện thoại nối với máy tính bằng hệ điều hành / phần mềm có sẵn
-- **Mac + iPhone**: tính năng *Continuity Camera* của macOS cho phép chọn iPhone làm micro → app thấy ngay trong danh sách micro.
-- **Windows**: dùng phần mềm điện thoại‑thành‑micro có sẵn (ví dụ WO Mic) hoặc tai nghe Bluetooth.
-- App không cần làm gì thêm: chỉ cần chọn đúng thiết bị trong danh sách.
-
-### Cách D – Mở file ghi âm có sẵn
-- Kéo thả file `.mp3 .m4a .wav .ogg .webm` vào app.
-- App giải mã bằng `ffmpeg` (đóng gói kèm app) → phát lại cùng phụ đề chạy theo thời gian, lỗi đánh dấu theo mốc thời gian.
+- **Trực tiếp**: STT streaming, hiện chữ xám (đang nghe) và chữ đen (đã chốt).
+- **Cuối bài**: STT trên cả file, lấy **mốc thời gian và độ tin cậy từng từ**, giữ cả từ ngập ngừng.
+- **Bắt buộc tắt** chế độ tự sửa/làm đẹp câu của dịch vụ STT nếu có, để giữ nguyên lỗi của sinh viên.
+- Giao diện `SttProvider` dùng chung để đổi nhà cung cấp dễ dàng; tuần 1 so sánh 2–3 dịch vụ trên ghi âm thật của sinh viên.
+- Tùy chọn sau này: Whisper chạy offline cho bản transcript cuối (miễn phí, riêng tư).
 
 ---
 
-## 6. Nhận dạng giọng nói (Speech‑to‑Text)
+## 7. Chấm phát âm
 
-Thiết kế một **giao diện chung** để đổi nhà cung cấp mà không sửa phần còn lại:
+**Vì sao cần dịch vụ riêng:** lỗi phát âm nằm trong âm thanh. Nếu chỉ đưa chữ cho AI thì không biết sinh viên đọc
+"think" thành "sink" hay đọc đúng. Cần dịch vụ so sánh âm thanh với cách đọc chuẩn đến **từng âm vị (phoneme)**.
 
-```ts
-interface SttProvider {
-  start(opts: { language: 'en-US'; sampleRate: 16000 }): Promise<void>;
-  pushAudio(pcm: Int16Array): void;
-  stop(): Promise<void>;
-  on(event: 'interim' | 'final', cb: (r: SttResult) => void): void;
-}
-interface SttResult {
-  text: string;
-  words: { word: string; start: number; end: number; confidence: number }[];
-  isFinal: boolean;
-}
-```
+### 7.1. Hai chế độ
+| Chế độ | Khi nào | Độ chính xác |
+|---|---|---|
+| **Có kịch bản** (sinh viên dán bài viết sẵn) | Bài chuẩn bị trước | **Cao nhất**: so với văn bản chuẩn, phát hiện cả từ bị bỏ hoặc đọc sai thành từ khác |
+| **Nói tự do** (không có kịch bản) | Nói tự nhiên, hỏi đáp | Dùng chính transcript làm văn bản tham chiếu, chấm từng từ |
 
-| Lựa chọn | Ưu | Nhược | Dùng khi |
-|---|---|---|---|
-| STT streaming trên mây (Deepgram, AssemblyAI, Azure Speech, Google Speech…) | Độ trễ thấp, chính xác với giọng người Việt nói tiếng Anh, có điểm tin cậy từng từ | Tốn phí theo phút, cần Internet | **Mặc định MVP** |
-| Whisper offline (`whisper.cpp` / `faster-whisper`) | Miễn phí, riêng tư, chạy không cần mạng | Không phải streaming thật (phải cắt đoạn 2–5 s), cần máy mạnh/GPU | Chế độ tiết kiệm/offline |
+### 7.2. Kết quả lấy về và cách hiển thị
+- Điểm từng từ (0–100), điểm từng âm vị, âm bị đọc sai, bỏ hoặc thừa âm.
+- Điểm tổng: độ chính xác, độ trôi chảy, độ đầy đủ, ngữ điệu (nếu dịch vụ có).
+- Từ có điểm dưới ngưỡng (ví dụ < 60, chỉnh được) → **tô tím**. Thẻ góp ý gồm: phiên âm IPA đúng, âm bị sai, mẹo sửa bằng tiếng Việt (ví dụ "/θ/: đặt đầu lưỡi giữa hai hàm răng rồi thổi hơi"), nút ▶ nghe giọng mẫu (TTS) và ▶ nghe lại giọng mình.
+- **Lỗi hay gặp của người Việt** được gom nhóm để nhận xét: bỏ âm cuối (/s/, /t/, /d/, /k/), /θ/ /ð/, /ʃ/ ↔ /s/, nguyên âm dài/ngắn, trọng âm từ.
 
-**Quan trọng cho việc sửa lỗi:** nhiều dịch vụ STT tự "làm đẹp" câu (tự sửa ngữ pháp nhẹ, thêm dấu câu).
-Cần **tắt các tùy chọn tự sửa/smart format** nếu có, và giữ lại cả từ ngập ngừng ("um", "uh")
-để phản ánh đúng câu học viên nói. Trước khi chốt nhà cung cấp, làm **thử nghiệm so sánh** (mục 11, tuần 1).
+### 7.3. Phân biệt lỗi phát âm và lỗi từ vựng
+Khi phát âm sai, STT có thể ghi thành **một từ khác** (đọc "ship" thành "sheep"). Nếu không xử lý, lỗi này
+sẽ bị báo nhầm là lỗi từ vựng. Cách xử lý:
+- Nếu có kịch bản: so khớp transcript với kịch bản, từ khác nhưng **gần âm** thì xếp vào lỗi phát âm.
+- Nếu không có kịch bản: gửi kèm độ tin cậy STT cho Claude. Prompt yêu cầu: từ sai nhưng gần âm với một từ hợp lý
+  trong ngữ cảnh thì xếp **"có thể là lỗi phát âm"**, không báo là lỗi từ vựng.
 
 ---
 
-## 7. Bộ sửa lỗi & gợi ý (Feedback Engine)
+## 8. Phát hiện lỗi từ vựng, ngữ pháp, cấu trúc (Claude)
 
-### 7.1. Khi nào gọi
-- Mỗi khi có câu **final** dài ≥ 3 từ. Bỏ qua câu chỉ có "yes", "okay"…
-- Gộp các câu ngắn liền nhau trong 1,5 s thành một lượt gọi để tiết kiệm.
-- Tối đa 1 yêu cầu đang chạy + 1 trong hàng đợi; nếu người nói quá nhanh thì gộp tiếp.
+### 8.1. Đầu vào
+- Transcript đầy đủ, **đánh số từng từ** (w0, w1, …) để Claude trả lỗi đúng vị trí.
+- Từ có độ tin cậy STT thấp và từ bị chấm phát âm kém.
+- Chủ đề, trình độ mục tiêu (B1/B2/C1), kịch bản (nếu có), mức độ sửa.
+- Bài dài (trên 10 phút) thì chia đoạn khoảng 300 từ, mỗi đoạn kèm đoạn trước làm ngữ cảnh, xử lý song song.
 
-### 7.2. Đầu vào gửi cho Claude
-- Câu cần sửa + 2 câu trước (ngữ cảnh) + chủ đề đang luyện.
-- Trình độ học viên (B1…), mức độ sửa, ngôn ngữ giải thích (tiếng Việt).
-- Các từ có độ tin cậy STT thấp → ghi chú "có thể do nhận dạng sai, đừng bắt lỗi chắc chắn".
-
-### 7.3. Đầu ra (JSON cố định – dùng tính năng structured output / tool use)
+### 8.2. Đầu ra (JSON cố định – dùng structured output / tool use)
 ```json
 {
-  "original": "Yesterday I go to school by bus and meet my friend.",
-  "corrected": "Yesterday I went to school by bus and met my friend.",
-  "is_correct": false,
-  "errors": [
-    { "span": "go", "fix": "went", "type": "verb_tense",
-      "explain_vi": "'Yesterday' là quá khứ → dùng quá khứ đơn 'went'." },
-    { "span": "meet", "fix": "met", "type": "verb_tense",
-      "explain_vi": "Động từ thứ hai cũng phải ở quá khứ: 'met'." }
+  "issues": [
+    { "type": "grammar", "subtype": "verb_tense",
+      "word_range": [12, 12], "original": "go", "suggestion": "went",
+      "explain_vi": "'Last week' là quá khứ → dùng quá khứ đơn.", "severity": "major" },
+    { "type": "vocabulary", "subtype": "collocation",
+      "word_range": [20, 22], "original": "make a research", "suggestion": "conduct research",
+      "explain_vi": "'research' đi với 'do/conduct', không đi với 'make'; và là danh từ không đếm được.", "severity": "major" },
+    { "type": "structure", "subtype": "sentence_structure",
+      "word_range": [30, 41], "original": "Because the price is high. So many people don't buy.",
+      "suggestion": "Because the price is high, many people don't buy it.",
+      "explain_vi": "Không dùng 'because' và 'so' cùng lúc; mệnh đề 'because' không đứng một mình.", "severity": "major" },
+    { "type": "upgrade", "word_range": [50, 53], "original": "very very important",
+      "suggestion": "absolutely crucial", "explain_vi": "Tránh lặp 'very'; dùng tính từ mạnh hơn.", "severity": "minor" }
   ],
-  "vocabulary": [
-    { "word": "commute", "meaning_vi": "đi lại (đi làm/đi học) hằng ngày",
-      "example": "I commute to school by bus." }
-  ],
-  "structure": {
-    "pattern": "On my way to …, I ran into …",
-    "example": "On my way to school, I ran into an old friend.",
-    "explain_vi": "'Run into' = tình cờ gặp, tự nhiên hơn 'meet'."
+  "corrected_text": "…toàn bộ bài sau khi sửa…",
+  "content_feedback_vi": {
+    "structure": "Có mở bài rõ, thiếu kết luận tóm tắt ý chính.",
+    "transitions": ["Moving on to…", "Another key point is…", "To sum up,…"],
+    "strengths": ["Ví dụ minh họa cụ thể"]
   },
-  "naturalness_tip_vi": "Người bản xứ hay nói 'took the bus to school'."
+  "scores": { "vocabulary": 72, "grammar": 65 }
 }
 ```
 
-### 7.4. Nguyên tắc của prompt hệ thống (tóm tắt)
-- Chỉ sửa lỗi **thật**; không bắt lỗi văn nói chấp nhận được ("gonna", câu ngắn).
-- Không bắt lỗi dấu câu/viết hoa (vì là văn nói, do STT tự thêm).
-- Giải thích ngắn (≤ 25 từ), bằng tiếng Việt, đúng trình độ.
-- Gợi ý từ vựng/cấu trúc **cao hơn trình độ hiện tại một bậc**, không quá khó.
-- Nếu câu đúng: `is_correct: true`, vẫn có thể đưa 1 gợi ý nói tự nhiên hơn.
+### 8.3. Nguyên tắc của prompt
+- Đây là **văn nói thuyết trình**: không bắt lỗi dấu câu hoặc viết hoa (do STT tự thêm), chấp nhận cách nói tự nhiên.
+- Chỉ báo lỗi chắc chắn; trường hợp nghi do STT nghe sai thì đánh dấu "có thể".
+- Giải thích tiếng Việt ngắn (≤ 30 từ); gợi ý chỉ cao hơn trình độ hiện tại **một bậc**.
+- Kiểm tra JSON trả về (đúng schema, `word_range` hợp lệ, `original` khớp transcript). Nếu sai thì yêu cầu trả lại một lần.
 
-### 7.5. Chọn model & chi phí
-- Góp ý từng câu: `claude-haiku-5-5` (nhanh, rẻ). Nếu thấy chất lượng chưa đủ thì chuyển `claude-sonnet-5-5`.
-- Tổng kết cuối buổi: `claude-sonnet-5-5` (phân tích toàn bộ buổi, tìm lỗi lặp lại).
-- Dùng **prompt caching** cho phần prompt hệ thống dài (giống nhau mọi lần gọi) để giảm chi phí và độ trễ.
-- Chi phí thực tế sẽ đo ở tuần 1–2 (số token/câu × số câu/buổi) rồi ghi vào tài liệu; đặt **giới hạn chi tiêu** trong Cài đặt.
+### 8.4. Model và chi phí
+- Phân tích cuối bài: `claude-sonnet-5-5` (chất lượng quan trọng hơn tốc độ, chỉ gọi 1 lần mỗi bài).
+- Gợi ý nhanh trên phụ đề trực tiếp (tùy chọn, có thể tắt): `claude-haiku-5-5`.
+- Dùng prompt caching cho prompt hệ thống. Chi phí thực tế mỗi bài (STT + phát âm + Claude) sẽ đo ở tuần 1–2, sau đó đặt **giới hạn chi tiêu** trong Cài đặt.
 
 ---
 
-## 8. Giao diện (phác thảo)
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│ 🎤 Micro: [Tai nghe AirPods ▾]  ▮▮▮▮▯▯▯  │ Chủ đề: [Phỏng vấn xin việc ▾]│
-│ [● Bắt đầu]  [⏸ Tạm dừng]  [■ Kết thúc]   │ 📱 Dùng điện thoại (QR)      │
-├───────────────────────────────────────────┬────────────────────────────┤
-│ PHỤ ĐỀ                                    │ GÓP Ý                      │
-│                                           │ ┌────────────────────────┐ │
-│ I have been working as a teacher          │ │ ✗ I go to school…      │ │
-│ for three years.                     ✓    │ │ ✓ I went to school…    │ │
-│                                           │ │ 📘 Thì quá khứ đơn vì… │ │
-│ Yesterday I ~~go~~ to school by bus  ⚠    │ │ 💡 Từ vựng: commute    │ │
-│ and ~~meet~~ my friend.                   │ │ 🧩 Cấu trúc: ran into  │ │
-│                                           │ └────────────────────────┘ │
-│ and I think that the job is very ░░░░     │ ┌────────────────────────┐ │
-│ (đang nghe…)                              │ │ ✓ Câu đúng! Gợi ý: …   │ │
-│                                           │ └────────────────────────┘ │
-├───────────────────────────────────────────┴────────────────────────────┤
-│ ⏱ 04:32   Số câu: 18   Lỗi: 6   Từ/phút: 96   [Lưu từ vựng] [Xuất PDF] │
-└────────────────────────────────────────────────────────────────────────┘
-```
-
-Màn hình khác: **Lịch sử buổi học**, **Tổng kết buổi**, **Sổ từ vựng**, **Cài đặt**, **Trang điện thoại** (nút micro to, đơn giản).
-Hỗ trợ **chế độ trình chiếu** (chữ lớn) cho lớp học.
+## 9. Ghép kết quả thành báo cáo
+1. Lấy transcript cuối làm **trục chính** (mỗi từ có chỉ số và mốc thời gian).
+2. Gắn điểm phát âm vào từng từ theo mốc thời gian.
+3. Gắn lỗi của Claude theo `word_range`.
+4. Một từ có nhiều lỗi thì hiện **màu theo lỗi nặng nhất** và gộp nhiều mục trong cùng thẻ góp ý.
+5. Tính điểm tổng, top lỗi lặp lại, thống kê, rồi lưu vào SQLite và tạo báo cáo HTML/PDF.
 
 ---
 
-## 9. Lưu trữ dữ liệu (SQLite)
+## 10. Giao diện (phác thảo)
+
+**Màn hình chiếu khi sinh viên đang nói**
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│ 🎤 Nguyễn Văn A – 2051xxxx   Chủ đề: Climate change   ⏱ 03:12   ▮▮▮▮▯ │
+├──────────────────────────────────────────────────────────────────────┤
+│   Good morning everyone. Today I want to talk about climate change,  │
+│   which is one of the biggest problem in the world. Last week I      │
+│   ░░ read an article about… (đang nghe)                              │
+├──────────────────────────────────────────────────────────────────────┤
+│ Tốc độ: 112 từ/phút      Hàng chờ: B (đã quét), C (đã quét)  [Kết thúc]│
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**Báo cáo**
+```
+┌──────────────────────────────────────────────┬───────────────────────┐
+│ ĐIỂM  Phát âm 68 · Trôi chảy 74 · Từ vựng 72 │ GÓP Ý                 │
+│       Ngữ pháp 65 · TỔNG 70                  │ 🔴 problem → problems │
+│ [🟣 Phát âm] [🟠 Từ vựng] [🔴 Ngữ pháp] [🔵] │ "one of the + danh từ │
+├──────────────────────────────────────────────┤  số nhiều"            │
+│ Good morning everyone. Today I want to talk  │ ▶ nghe lại 00:14      │
+│ about climate change, which is one of the    │                       │
+│ biggest 🔴problem🔴 in the world. Last week I │ 🟣 think /θɪŋk/       │
+│ 🔴go🔴 to a seminar and 🟠make a research🟠   │ bạn đọc /sɪŋk/        │
+│ … I 🟣think🟣 we must act now …               │ ▶ mẫu  ▶ giọng bạn    │
+├──────────────────────────────────────────────┴───────────────────────┤
+│ Top lỗi: bỏ âm cuối /s/ (7) · thì quá khứ (4) · /θ/ (3)               │
+│ [Bản đã sửa] [Xuất PDF] [Gửi sinh viên] [Sinh viên kế tiếp ▶]         │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+Các màn hình khác: **Lớp học / danh sách sinh viên**, **Hồ sơ sinh viên** (tiến bộ qua các bài), **Cài đặt**, **Trang điện thoại** (nút to: Bắt đầu / Kết thúc, mức âm lượng, xem báo cáo).
+
+---
+
+## 11. Lưu trữ dữ liệu (SQLite)
 
 ```sql
-sessions   (id, started_at, ended_at, topic, level, audio_path, summary_json)
-utterances (id, session_id, start_ms, end_ms, text, corrected, is_correct, feedback_json)
-errors     (id, utterance_id, type, span, fix, explain_vi)
-vocab      (id, word, meaning_vi, example, source_utterance_id, added_at,
-            next_review_at, ease, interval_days)
-settings   (key, value)
+classes        (id, name, term)
+students       (id, class_id, student_code, full_name)
+presentations  (id, student_id, topic, script_text, started_at, duration_ms,
+                audio_path, transcript_json, scores_json, content_feedback_json)
+words          (presentation_id, idx, text, start_ms, end_ms, stt_confidence, pron_score, phonemes_json)
+issues         (id, presentation_id, type, subtype, word_start, word_end,
+                original, suggestion, explain_vi, severity)
+vocab          (id, student_id, word, meaning_vi, example, added_at)
+settings       (key, value)
 ```
-- File ghi âm buổi học: lưu tùy chọn (mặc định **không lưu** để bảo vệ riêng tư).
-- Thống kê "lỗi hay gặp" = `GROUP BY type` trên bảng `errors`.
+- File âm thanh lưu trên laptop. Có tùy chọn tự xóa sau N ngày (mặc định 30) để bảo vệ quyền riêng tư.
+- Thống kê tiến bộ = so sánh điểm và số lỗi theo loại qua các bài của cùng sinh viên.
 
 ---
 
-## 10. Cấu trúc thư mục mã nguồn dự kiến
+## 12. Cấu trúc thư mục mã nguồn dự kiến
 
 ```
 appluyennoi/
-├─ docs/                      # tài liệu (file này)
+├─ docs/
 ├─ apps/
-│  ├─ desktop/                # Electron
-│  │  ├─ src/main/            # tiến trình chính: cửa sổ, SQLite, khóa API, server LAN
-│  │  │  ├─ stt/              # SttProvider + các nhà cung cấp
-│  │  │  ├─ feedback/         # gọi Claude, prompt, schema JSON
-│  │  │  ├─ phone-bridge/     # HTTPS + WebSocket cho điện thoại, QR, ghép đôi
-│  │  │  └─ db/               # migrations, truy vấn
-│  │  ├─ src/preload/         # cầu nối an toàn main ↔ renderer
-│  │  └─ src/renderer/        # React UI: Phụ đề, Thẻ góp ý, Lịch sử, Cài đặt
-│  │     └─ audio/            # AudioWorklet, VAD, đo âm lượng
-│  └─ phone-web/              # trang web nhỏ cho điện thoại (micro qua trình duyệt)
-├─ packages/shared/           # kiểu dữ liệu dùng chung (TypeScript)
-└─ tests/                     # bộ câu mẫu có lỗi + file âm thanh mẫu
+│  ├─ desktop/                    # Electron (laptop giảng viên)
+│  │  ├─ src/main/
+│  │  │  ├─ phone-bridge/         # HTTPS + WebSocket, chứng chỉ, QR, ghép đôi, hàng chờ
+│  │  │  ├─ stt/                  # SttProvider (streaming + cả file)
+│  │  │  ├─ pronunciation/        # PronunciationProvider
+│  │  │  ├─ analysis/             # gọi Claude, prompt, schema, ghép kết quả, chấm điểm
+│  │  │  ├─ report/               # tạo HTML/PDF
+│  │  │  └─ db/
+│  │  ├─ src/preload/
+│  │  └─ src/renderer/            # React: Phụ đề, Báo cáo, Lớp học, Cài đặt
+│  └─ phone-web/                  # trang web cho điện thoại sinh viên
+├─ packages/shared/               # kiểu dữ liệu chung (TypeScript)
+└─ tests/                         # ghi âm mẫu + transcript có đáp án lỗi
 ```
-
-Công cụ: Vite, electron-builder (đóng gói `.exe`/`.dmg`), better-sqlite3, Vitest, Playwright (test giao diện), ESLint/Prettier.
+Công cụ: Vite, electron-builder, better-sqlite3, ffmpeg (đóng gói kèm), Vitest, Playwright.
 
 ---
 
-## 11. Lộ trình thực hiện (≈ 10 tuần, 1–2 lập trình viên)
+## 13. Lộ trình (≈ 10 tuần, 1–2 lập trình viên)
 
 | Tuần | Công việc | Kết quả bàn giao |
 |---|---|---|
-| **1** | Thử nghiệm kỹ thuật: thu âm trong Electron, thử 2–3 dịch vụ STT với 20 đoạn ghi âm học viên thật (đo độ chính xác, độ trễ, có tự sửa ngữ pháp không). Thử prompt sửa lỗi trên 100 câu mẫu | Báo cáo chọn nhà cung cấp STT; prompt v1 |
-| **2** | Khung dự án Electron + React, chọn micro, thanh âm lượng, Cài đặt + lưu khóa API an toàn | App chạy được, nghe được micro |
-| **3** | Tích hợp STT streaming, hiển thị phụ đề interim/final, tự kết nối lại khi rớt mạng | **Phụ đề thời gian thực** hoạt động |
-| **4** | Feedback Engine: hàng đợi, gọi Claude, kiểm tra JSON, thẻ góp ý, gạch chân lỗi trong phụ đề | **Sửa lỗi + gợi ý** hoạt động |
-| **5** | SQLite: lưu buổi học, lịch sử, xuất TXT/PDF; mở file âm thanh có sẵn (ffmpeg) | **MVP hoàn chỉnh** |
-| **6** | Thử nghiệm với 5–10 học viên thật, sửa lỗi, tinh chỉnh prompt, đóng gói bản cài Windows/macOS | **Bản MVP 1.0** |
-| **7–8** | Điện thoại làm micro qua Wi‑Fi (HTTPS tự ký, QR, mã ghép đôi, trang phone-web) | Dùng iPhone/Android làm micro không cần cài app |
-| **9** | Tổng kết buổi học, sổ từ vựng + flashcard, thống kê từ/phút | Bản 1.1 |
-| **10** | Chế độ trình chiếu cho lớp học, chủ đề luyện nói, hoàn thiện & tài liệu hướng dẫn | **Bản 1.2** |
+| **1** | **Thử nghiệm rủi ro lớn nhất:** (a) iPhone Safari gửi âm thanh về laptop qua HTTPS/WebSocket; (b) so sánh 2–3 dịch vụ STT và 2 dịch vụ chấm phát âm trên 20 bài ghi âm thật của sinh viên; (c) prompt Claude trên 30 transcript mẫu | Báo cáo chọn công nghệ + prompt v1 |
+| **2** | Khung Electron + React; Phone Bridge: QR, mã ghép đôi, trang phone-web, Bắt đầu/Kết thúc | Điện thoại nói thì laptop nhận được âm thanh |
+| **3** | Ghi âm dự phòng trên điện thoại, tải file lên, tự kết nối lại, hàng chờ nhiều sinh viên; phụ đề trực tiếp | **Phụ đề trực tiếp từ điện thoại** |
+| **4** | Pipeline cuối bài: STT cả file + mốc thời gian từng từ; lưu SQLite | Transcript đầy đủ chính xác |
+| **5** | Tích hợp chấm phát âm (có/không kịch bản), tô tím, nghe lại đoạn âm thanh | **Lỗi phát âm** |
+| **6** | Claude: từ vựng, ngữ pháp, cấu trúc, nội dung; kiểm tra JSON; ghép lỗi; điểm | **Lỗi từ vựng + ngữ pháp + đề xuất sửa** |
+| **7** | Màn hình báo cáo, bộ lọc, bản đã sửa, xuất PDF; sinh viên xem báo cáo trên điện thoại | **Bản MVP hoàn chỉnh** |
+| **8** | **Dùng thử trong 1–2 lớp thật**, thu phản hồi giảng viên và sinh viên, đo độ chính xác | Danh sách cần sửa |
+| **9** | Sửa lỗi, tinh chỉnh prompt/ngưỡng chấm; lớp học, hồ sơ sinh viên, xuất điểm Excel | Bản 1.0 |
+| **10** | Đóng gói bản cài Windows/macOS, hướng dẫn sử dụng (có ảnh cho bước HTTPS trên iPhone) | **Phát hành 1.0** |
 
-Sau đó (giai đoạn 3): chấm phát âm, hội thoại với AI, chế độ offline.
-
----
-
-## 12. Kiểm thử & tiêu chí chất lượng
-
-- **Bộ dữ liệu chuẩn**: 200 câu tiếng Anh có lỗi điển hình của người Việt (thì, mạo từ, số ít/nhiều, giới từ, "I very like…", thiếu động từ to be…) kèm đáp án.
-  - Mục tiêu: phát hiện đúng ≥ 85% lỗi; báo lỗi sai (câu đúng mà bị sửa) ≤ 10%.
-- **Âm thanh mẫu**: 30 file ghi âm (giọng nam/nữ, nhiều trình độ, có tiếng ồn lớp học).
-  - Mục tiêu: tỉ lệ lỗi nhận dạng từ (WER) ≤ 15% trong môi trường yên tĩnh.
-- **Độ trễ**: đo tự động theo mục 4.2, ghi log mỗi buổi.
-- **Ổn định**: chạy liên tục 60 phút không rò rỉ bộ nhớ, tự nối lại khi mất mạng.
-- **Unit test**: chuẩn hóa âm thanh, ghép câu, kiểm tra JSON, truy vấn SQLite.
+Sau đó: sổ từ vựng/flashcard, so sánh tiến bộ qua các bài, chế độ offline (Whisper), hỏi đáp với AI sau thuyết trình.
 
 ---
 
-## 13. Rủi ro & cách xử lý
+## 14. Kiểm thử & tiêu chí chất lượng
+
+- **Bộ dữ liệu**: 30 bài thuyết trình ghi âm thật (có sự đồng ý), nhiều trình độ, có tiếng ồn lớp học. Giảng viên đánh dấu lỗi thủ công để làm đáp án.
+- **Transcript**: tỉ lệ lỗi nhận dạng từ (WER) ≤ 12% khi điện thoại cách miệng ≤ 30 cm.
+- **Ngữ pháp/từ vựng**: phát hiện ≥ 80% lỗi giảng viên đánh dấu; báo lỗi oan ≤ 10%.
+- **Phát âm**: các từ app tô tím trùng ≥ 70% với từ giảng viên cho là sai (sẽ điều chỉnh ngưỡng theo dữ liệu thật).
+- **Thời gian**: báo cáo xong ≤ 90 giây cho bài 5 phút; phụ đề trực tiếp trễ < 1 giây.
+- **Độ bền**: rút Wi‑Fi 10 giây giữa bài thì báo cáo vẫn đầy đủ; chạy liền 3 giờ (cả buổi học) không lỗi.
+- **Thiết bị**: thử trên iPhone (Safari) và Android (Chrome), mỗi loại ít nhất 2 đời máy.
+
+---
+
+## 15. Rủi ro & cách xử lý
 
 | Rủi ro | Cách xử lý |
 |---|---|
-| STT tự sửa ngữ pháp → che mất lỗi của học viên | Tắt smart format/auto‑correct; chọn nhà cung cấp "nghe đúng nguyên văn" ở tuần 1 |
-| STT nghe sai do phát âm → app bắt lỗi oan | Gửi kèm độ tin cậy từng từ; prompt yêu cầu không bắt lỗi chắc chắn với từ tin cậy thấp; có nút "App nghe sai" |
-| Độ trễ góp ý cao | Model nhanh, streaming, prompt caching, giới hạn độ dài đầu ra |
-| Mất Internet | Hiện cảnh báo, chuyển sang Whisper offline (giai đoạn 3) hoặc chỉ ghi âm để phân tích sau |
-| Chi phí API | Giới hạn chi tiêu, gộp câu, bỏ qua câu quá ngắn, thống kê chi phí trong Cài đặt |
-| Wi‑Fi chặn kết nối điện thoại–laptop | Hướng dẫn dùng điểm phát Wi‑Fi; dự phòng tai nghe/micro USB |
-| iPhone cảnh báo chứng chỉ HTTPS | Hướng dẫn từng bước có ảnh; sau này dùng mkcert |
-| Riêng tư giọng nói học sinh | Mặc định không lưu âm thanh; nói rõ dữ liệu gửi tới dịch vụ nào; nút xóa toàn bộ dữ liệu |
-| macOS chặn quyền micro / app chưa ký số | Khai báo quyền micro trong `Info.plist`; ký & notarize app khi phát hành rộng |
+| iPhone không cho dùng micro vì chứng chỉ tự ký | Làm thử ngay tuần 1; có hướng dẫn kèm ảnh; dự phòng: sinh viên ghi âm bằng app Ghi âm rồi gửi file (AirDrop/Zalo), app mở file để phân tích |
+| Wi‑Fi trường chặn kết nối giữa các máy | Laptop phát hotspot hoặc dùng bộ phát Wi‑Fi riêng |
+| STT tự sửa ngữ pháp nên che lỗi | Tắt smart format; chọn dịch vụ ở tuần 1 dựa trên dữ liệu thật |
+| Phát âm sai bị nhận thành từ khác, báo nhầm thành lỗi từ vựng | Mục 7.3: dùng kịch bản, độ tin cậy STT, nhãn "có thể là lỗi phát âm" |
+| Chấm phát âm chưa chuẩn với giọng Việt | Giảng viên chỉnh ngưỡng; nút "Báo chấm sai" để thu dữ liệu cải tiến |
+| Ồn lớp học, tiếng vọng loa máy chiếu | Hướng dẫn cầm điện thoại gần miệng; cảnh báo khi âm thanh kém |
+| Chi phí API khi cả lớp dùng | Đo chi phí thực tế mỗi bài ở tuần 1; giới hạn chi tiêu; tắt gợi ý trực tiếp nếu không cần |
+| Quyền riêng tư giọng nói sinh viên | Xin đồng ý; nói rõ dữ liệu gửi tới dịch vụ nào; tự xóa âm thanh sau N ngày; nút xóa dữ liệu một sinh viên |
 
 ---
 
-## 14. Việc cần chuẩn bị / quyết định trước khi code
+## 16. Cần chuẩn bị / quyết định trước khi code
 
-1. Tài khoản & khóa API: 1 dịch vụ STT streaming + Claude API.
-2. Thu 20–30 đoạn ghi âm thật của học viên (có sự đồng ý) để thử nghiệm tuần 1.
-3. Xác nhận hệ điều hành chính của người dùng (Windows hay macOS chiếm đa số?) để ưu tiên kiểm thử.
-4. Xác nhận ngân sách chi phí API hằng tháng → đặt giới hạn mặc định.
-5. Danh sách chủ đề luyện nói và trình độ học viên mục tiêu.
+1. Tài khoản và khóa API: 1 dịch vụ STT, 1 dịch vụ chấm phát âm, Claude API.
+2. 20–30 bài thuyết trình ghi âm thật của sinh viên (có đồng ý), kèm đánh dấu lỗi của giảng viên.
+3. Laptop giảng viên chủ yếu dùng Windows hay macOS? Phòng học có Wi‑Fi ổn định, có chặn kết nối giữa các máy không?
+4. Thang điểm và trọng số mong muốn (phát âm / trôi chảy / từ vựng / ngữ pháp / nội dung).
+5. Sinh viên thường thuyết trình theo kịch bản soạn sẵn hay nói tự do? (ảnh hưởng độ chính xác chấm phát âm)
+6. Ngân sách chi phí API mỗi học kỳ.
